@@ -1,0 +1,1438 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>今日任务打卡</title>
+    <link rel="icon" href="https://app.springbear.cn/self-hub/favicon.ico" />
+    <!-- 引入Tailwind CSS（样式框架） -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入Font Awesome图标 -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.css"
+    />
+    <!-- 自定义Tailwind配置 -->
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: { DEFAULT: "#6366F1", 50: "#EEF2FF", 600: "#4F46E5" },
+              success: { DEFAULT: "#10B981", 50: "#ECFDF5" },
+              neutral: "#64748B",
+              warning: { DEFAULT: "#F59E0B", 50: "#FFFBEB" },
+              danger: { DEFAULT: "#EF4444", 50: "#FEF2F2" },
+            },
+            fontFamily: {
+              sans: [
+                "-apple-system",
+                "BlinkMacSystemFont",
+                "PingFang SC",
+                "Hiragino Sans GB",
+                "Microsoft YaHei",
+                "system-ui",
+                "sans-serif",
+              ],
+            },
+            boxShadow: {
+              card: "0 4px 24px rgba(99, 102, 241, 0.08)",
+              float: "0 8px 32px rgba(99, 102, 241, 0.28)",
+            },
+          },
+        },
+      };
+    </script>
+    <style type="text/tailwindcss">
+      @layer utilities {
+        .bg-gradient-primary {
+          background-image: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        }
+
+        .form-input {
+          @apply w-full py-3 rounded-xl border border-gray-200 bg-gray-50/50 focus:bg-white focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all duration-200;
+        }
+
+        .toast-base {
+          @apply fixed top-6 left-1/2 -translate-x-1/2 px-5 py-3 rounded-xl text-white text-sm z-[60] transition-all duration-300 pointer-events-none flex items-center gap-2 shadow-lg max-w-[90vw];
+        }
+
+        .toast-success {
+          @apply bg-success/95 backdrop-blur-sm;
+        }
+        .toast-error {
+          @apply bg-danger/95 backdrop-blur-sm;
+        }
+        .toast-info {
+          @apply bg-primary/95 backdrop-blur-sm;
+        }
+        .toast-warning {
+          @apply bg-warning/95 backdrop-blur-sm;
+        }
+      }
+    </style>
+    <style>
+      /* 基础细节：去除移动端点击高亮与双击缩放 */
+      * {
+        -webkit-tap-highlight-color: transparent;
+      }
+      button,
+      input,
+      textarea,
+      img {
+        touch-action: manipulation;
+      }
+
+      /* 卡片入场动画 */
+      @keyframes fadeUp {
+        from {
+          opacity: 0;
+          transform: translateY(12px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .animate-fade-up {
+        animation: fadeUp 0.4s ease-out both;
+      }
+
+      /* 全完成大图标弹跳 */
+      @keyframes popIn {
+        0% {
+          transform: scale(0);
+          opacity: 0;
+        }
+        70% {
+          transform: scale(1.15);
+        }
+        100% {
+          transform: scale(1);
+          opacity: 1;
+        }
+      }
+      .animate-pop {
+        animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) both;
+      }
+
+      /* 登录失败抖动 */
+      @keyframes shake {
+        0%,
+        100% {
+          transform: translateX(0);
+        }
+        20%,
+        60% {
+          transform: translateX(-6px);
+        }
+        40%,
+        80% {
+          transform: translateX(6px);
+        }
+      }
+      .animate-shake {
+        animation: shake 0.4s ease-in-out;
+      }
+
+      /* 验证码加载闪烁 */
+      @keyframes pulseLight {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.55;
+        }
+      }
+      .animate-pulse-light {
+        animation: pulseLight 1.5s infinite;
+      }
+
+      /* 进度环过渡 */
+      #ringFg {
+        transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      /* 数字滚动过渡 */
+      .count-bounce {
+        transition: transform 0.15s ease;
+      }
+      .count-bounce.bumping {
+        transform: scale(1.2);
+      }
+    </style>
+  </head>
+  <body
+    class="bg-[#F4F5FB] min-h-screen font-sans text-gray-800 selection:bg-primary/20"
+  >
+    <!-- 全屏加载遮罩 -->
+    <div
+      id="loadingOverlay"
+      class="fixed inset-0 bg-white/90 backdrop-blur-sm flex items-center justify-center z-[70] hidden"
+    >
+      <div class="text-center">
+        <div
+          class="animate-spin rounded-full h-12 w-12 border-[3px] border-primary/20 border-t-primary mx-auto"
+        ></div>
+        <p class="text-neutral text-sm mt-4">加载中…</p>
+      </div>
+    </div>
+
+    <!-- Toast 提示 -->
+    <div id="toast" class="toast-base opacity-0 -translate-y-10">
+      <i id="toastIcon" class="fas"></i>
+      <span id="toastText"></span>
+    </div>
+
+    <!-- 彩带画布（全完成时庆祝） -->
+    <canvas
+      id="confettiCanvas"
+      class="fixed inset-0 z-[80] pointer-events-none hidden"
+    ></canvas>
+
+    <!-- ==================== 登录视图 ==================== -->
+    <section
+      id="loginView"
+      class="min-h-screen flex items-center justify-center p-5 relative overflow-hidden"
+    >
+      <!-- 背景装饰光斑 -->
+      <div
+        class="absolute -top-24 -left-24 w-72 h-72 bg-primary/10 rounded-full blur-3xl"
+      ></div>
+      <div
+        class="absolute -bottom-32 -right-20 w-80 h-80 bg-violet-400/10 rounded-full blur-3xl"
+      ></div>
+
+      <div class="relative w-full max-w-sm">
+        <!-- 品牌区 -->
+        <div class="text-center mb-8">
+          <div
+            class="w-16 h-16 bg-gradient-primary rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-float"
+          >
+            <i class="fas fa-clipboard-check text-2xl text-white"></i>
+          </div>
+          <h1 class="text-2xl font-bold text-gray-800">今日任务打卡</h1>
+          <p class="text-neutral text-sm mt-1.5">登录后查看并完成今日任务</p>
+        </div>
+
+        <!-- 登录卡片 -->
+        <form
+          id="loginForm"
+          class="bg-white rounded-3xl shadow-card p-6 space-y-4"
+        >
+          <!-- 用户名 -->
+          <div>
+            <label
+              for="username"
+              class="block text-sm font-medium text-gray-700 mb-1.5"
+              >用户名</label
+            >
+            <div class="relative">
+              <i
+                class="fas fa-user absolute left-4 top-1/2 -translate-y-1/2 text-neutral/60 text-sm"
+              ></i>
+              <input
+                type="text"
+                id="username"
+                class="form-input pl-11 pr-4"
+                placeholder="请输入用户名"
+                autocomplete="username"
+                required
+              />
+            </div>
+          </div>
+          <!-- 密码 -->
+          <div>
+            <label
+              for="password"
+              class="block text-sm font-medium text-gray-700 mb-1.5"
+              >密码</label
+            >
+            <div class="relative">
+              <i
+                class="fas fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-neutral/60 text-sm"
+              ></i>
+              <input
+                type="password"
+                id="password"
+                class="form-input pl-11 pr-11"
+                placeholder="请输入密码"
+                autocomplete="current-password"
+                required
+              />
+              <button
+                type="button"
+                id="togglePwd"
+                class="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-neutral hover:text-primary transition-colors"
+                aria-label="显示/隐藏密码"
+              >
+                <i class="fas fa-eye-slash"></i>
+              </button>
+            </div>
+          </div>
+          <!-- 验证码 -->
+          <div>
+            <label
+              for="captcha"
+              class="block text-sm font-medium text-gray-700 mb-1.5"
+              >验证码</label
+            >
+            <div class="flex gap-3">
+              <div class="relative flex-1">
+                <i
+                  class="fas fa-shield-halved absolute left-4 top-1/2 -translate-y-1/2 text-neutral/60 text-sm"
+                ></i>
+                <input
+                  type="text"
+                  id="captcha"
+                  class="form-input pl-11 pr-4"
+                  placeholder="请输入验证码"
+                  maxlength="6"
+                  autocomplete="off"
+                  required
+                />
+              </div>
+              <div class="relative shrink-0">
+                <img
+                  id="captchaImg"
+                  src="#"
+                  alt="点击刷新验证码"
+                  class="h-12 w-28 rounded-xl border border-gray-200 cursor-pointer object-cover hover:opacity-85 transition-opacity"
+                  onclick="getCaptcha()"
+                />
+                <span
+                  class="absolute -bottom-1.5 left-1/2 -translate-x-1/2 text-[10px] text-neutral bg-white px-1.5 rounded-full border border-gray-100 whitespace-nowrap"
+                >
+                  <i class="fas fa-rotate-right mr-0.5"></i>点击刷新
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            id="loginBtn"
+            class="w-full bg-gradient-primary text-white py-3.5 rounded-xl font-semibold text-[15px] hover:opacity-95 active:scale-[0.98] transition-all shadow-float"
+          >
+            登 录
+          </button>
+        </form>
+
+        <p class="text-center text-xs text-neutral/70 mt-6">
+          登录信息仅保存在本机浏览器中
+        </p>
+      </div>
+    </section>
+
+    <!-- ==================== 任务视图 ==================== -->
+    <section id="taskView" class="hidden min-h-screen">
+      <!-- 顶部导航 -->
+      <header
+        class="sticky top-0 z-30 bg-[#F4F5FB]/85 backdrop-blur-md border-b border-gray-200/60"
+      >
+        <div
+          class="max-w-md mx-auto px-4 py-3.5 flex items-center justify-between"
+        >
+          <div>
+            <h1 class="font-bold text-gray-800 leading-tight">
+              你好，<span id="greetingName">用户</span> 👋
+            </h1>
+            <p class="text-xs text-neutral mt-0.5" id="todayDate"></p>
+          </div>
+          <button
+            onclick="logout()"
+            class="p-2.5 text-neutral hover:text-danger hover:bg-danger/10 rounded-xl transition-colors"
+            aria-label="退出登录"
+          >
+            <i class="fas fa-arrow-right-from-bracket"></i>
+          </button>
+        </div>
+      </header>
+
+      <main class="max-w-md mx-auto px-4 pt-4 pb-32">
+        <!-- 进度卡片 -->
+        <div
+          class="bg-white rounded-3xl shadow-card p-5 flex items-center gap-5 animate-fade-up"
+        >
+          <div class="relative w-20 h-20 shrink-0">
+            <svg viewBox="0 0 100 100" class="w-20 h-20 -rotate-90">
+              <circle
+                cx="50"
+                cy="50"
+                r="42"
+                fill="none"
+                stroke="#EEF0F8"
+                stroke-width="10"
+              />
+              <circle
+                id="ringFg"
+                cx="50"
+                cy="50"
+                r="42"
+                fill="none"
+                stroke="url(#ringGrad)"
+                stroke-width="10"
+                stroke-linecap="round"
+                stroke-dasharray="263.9"
+                stroke-dashoffset="263.9"
+              />
+              <defs>
+                <linearGradient
+                  id="ringGrad"
+                  x1="0%"
+                  y1="0%"
+                  x2="100%"
+                  y2="100%"
+                >
+                  <stop offset="0%" stop-color="#6366F1" />
+                  <stop offset="100%" stop-color="#8B5CF6" />
+                </linearGradient>
+              </defs>
+            </svg>
+            <div
+              class="absolute inset-0 flex flex-col items-center justify-center"
+            >
+              <span id="progressPct" class="text-sm font-bold text-gray-800"
+                >0%</span
+              >
+            </div>
+          </div>
+          <div class="min-w-0">
+            <p class="text-xs text-neutral mb-1">今日进度</p>
+            <p class="text-lg font-bold text-gray-800">
+              已完成 <span id="doneCount" class="text-primary">0</span
+              ><span class="text-neutral font-medium">
+                / <span id="totalCount">0</span></span
+              >
+              项
+            </p>
+            <p id="progressTip" class="text-xs text-neutral mt-1.5 truncate">
+              开始打卡吧，今天也要加油哦 💪
+            </p>
+          </div>
+        </div>
+
+        <!-- 待完成列表 -->
+        <div id="todoSection" class="mt-5 hidden">
+          <h2
+            class="flex items-center text-sm font-semibold text-gray-700 mb-3 px-1"
+          >
+            <i class="fas fa-circle-notch text-primary text-xs mr-2"></i
+            >待完成任务
+            <span
+              id="todoBadge"
+              class="ml-2 text-xs font-medium text-primary bg-primary/10 px-2 py-0.5 rounded-full"
+            ></span>
+          </h2>
+          <div id="todoList" class="space-y-3"></div>
+        </div>
+
+        <!-- 已完成列表 -->
+        <div id="doneSection" class="mt-5 hidden">
+          <button
+            id="doneSectionHeader"
+            onclick="toggleDoneSection()"
+            class="w-full flex items-center text-sm font-semibold text-gray-700 mb-3 px-1"
+          >
+            <i class="fas fa-check text-success text-xs mr-2"></i>已完成
+            <span
+              id="doneBadge"
+              class="ml-2 text-xs font-medium text-success bg-success/10 px-2 py-0.5 rounded-full"
+            ></span>
+            <i
+              id="doneChevron"
+              class="fas fa-chevron-down text-neutral/50 text-xs ml-auto transition-transform duration-300"
+            ></i>
+          </button>
+          <div id="doneList" class="space-y-2.5"></div>
+        </div>
+
+        <!-- 空任务状态 -->
+        <div id="emptyState" class="hidden text-center mt-12 animate-fade-up">
+          <div class="bg-white rounded-3xl shadow-card p-10">
+            <div
+              class="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-5"
+            >
+              <i class="fas fa-mug-hot text-2xl text-primary"></i>
+            </div>
+            <h2 class="text-lg font-bold text-gray-800 mb-2">今日暂无任务</h2>
+            <p class="text-neutral text-sm mb-7">
+              好好休息，享受轻松的一天吧 😊
+            </p>
+            <button
+              onclick="loadTasks()"
+              class="bg-primary/10 text-primary px-8 py-2.5 rounded-xl text-sm font-medium hover:bg-primary/20 transition-colors"
+            >
+              刷新任务
+            </button>
+          </div>
+        </div>
+
+        <!-- 全部完成状态 -->
+        <div id="allDoneState" class="hidden text-center mt-12 animate-fade-up">
+          <div class="bg-white rounded-3xl shadow-card p-10">
+            <div
+              class="w-20 h-20 bg-gradient-primary rounded-full flex items-center justify-center mx-auto mb-6 shadow-float animate-pop"
+            >
+              <i class="fas fa-check text-3xl text-white"></i>
+            </div>
+            <h2 class="text-xl font-bold text-gray-800 mb-2">
+              今日任务全部完成！
+            </h2>
+            <p class="text-neutral text-sm mb-7 leading-relaxed">
+              太棒了，坚持就是胜利 ✨<br />今天完成了
+              <span id="allDoneCount" class="text-primary font-semibold"></span>
+              项任务
+            </p>
+            <button
+              onclick="loadTasks()"
+              class="bg-success text-white px-8 py-2.5 rounded-xl text-sm font-medium hover:bg-success/90 active:scale-95 transition-all"
+            >
+              刷新状态
+            </button>
+          </div>
+        </div>
+
+        <!-- 加载失败状态 -->
+        <div id="errorState" class="hidden text-center mt-12 animate-fade-up">
+          <div class="bg-white rounded-3xl shadow-card p-10">
+            <div
+              class="w-16 h-16 bg-warning/10 rounded-full flex items-center justify-center mx-auto mb-5"
+            >
+              <i class="fas fa-triangle-exclamation text-2xl text-warning"></i>
+            </div>
+            <h2 class="text-lg font-bold text-gray-800 mb-2">任务加载失败</h2>
+            <p class="text-neutral text-sm mb-7">
+              请检查网络后重试，或重新登录
+            </p>
+            <div class="flex gap-3 justify-center">
+              <button
+                onclick="loadTasks()"
+                class="bg-primary text-white px-7 py-2.5 rounded-xl text-sm font-medium hover:bg-primary/90 active:scale-95 transition-all"
+              >
+                重试
+              </button>
+              <button
+                onclick="logout()"
+                class="bg-gray-100 text-gray-600 px-7 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-200 active:scale-95 transition-all"
+              >
+                重新登录
+              </button>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <!-- 底部批量完成栏 -->
+      <div id="batchBar" class="fixed bottom-0 inset-x-0 z-30 hidden">
+        <div
+          class="max-w-md mx-auto px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-2 bg-gradient-to-t from-[#F4F5FB] via-[#F4F5FB]/90 to-transparent"
+        >
+          <button
+            id="batchBtn"
+            onclick="openBatchModal()"
+            class="w-full bg-gradient-primary text-white py-4 rounded-2xl font-semibold text-[15px] hover:opacity-95 active:scale-[0.98] transition-all shadow-float flex items-center justify-center gap-2"
+          >
+            <i class="fas fa-bolt"></i>
+            <span id="batchBtnText">一键完成全部</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== 单任务完成弹层 ==================== -->
+    <div id="sheetWrap" class="fixed inset-0 z-40 hidden">
+      <div
+        id="sheetBackdrop"
+        class="absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 transition-opacity duration-300"
+      ></div>
+      <div
+        id="sheet"
+        class="absolute bottom-0 inset-x-0 max-w-md mx-auto bg-white rounded-t-3xl p-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))] translate-y-full transition-transform duration-300 ease-out"
+      >
+        <div class="w-10 h-1.5 bg-gray-200 rounded-full mx-auto mb-5"></div>
+
+        <div class="flex items-start gap-3">
+          <div
+            class="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center shrink-0"
+          >
+            <i class="fas fa-bullseye text-primary"></i>
+          </div>
+          <div class="min-w-0 flex-1">
+            <h3
+              id="sheetName"
+              class="font-semibold text-gray-800 leading-snug"
+            ></h3>
+            <p
+              id="sheetDesc"
+              class="text-xs text-neutral mt-1 line-clamp-2"
+            ></p>
+          </div>
+          <button
+            onclick="closeSheet()"
+            class="p-1.5 text-neutral/60 hover:text-gray-800 transition-colors shrink-0"
+            aria-label="关闭"
+          >
+            <i class="fas fa-xmark text-lg"></i>
+          </button>
+        </div>
+
+        <!-- 完成数量步进器 -->
+        <div class="mt-6">
+          <div class="flex items-center justify-between mb-3">
+            <label class="text-sm font-medium text-gray-700">完成数量</label>
+            <span id="sheetRange" class="text-xs text-neutral"></span>
+          </div>
+          <div
+            class="flex items-center justify-center gap-8 bg-gray-50 rounded-2xl py-4"
+          >
+            <button
+              id="sheetMinus"
+              class="w-11 h-11 rounded-full bg-white shadow-card text-xl text-gray-600 hover:text-primary active:scale-90 transition-all disabled:opacity-30 disabled:active:scale-100"
+              aria-label="减少"
+            >
+              <i class="fas fa-minus"></i>
+            </button>
+            <span
+              id="sheetCount"
+              class="text-4xl font-bold text-primary w-16 text-center tabular-nums count-bounce"
+            ></span>
+            <button
+              id="sheetPlus"
+              class="w-11 h-11 rounded-full bg-white shadow-card text-xl text-gray-600 hover:text-primary active:scale-90 transition-all disabled:opacity-30 disabled:active:scale-100"
+              aria-label="增加"
+            >
+              <i class="fas fa-plus"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- 完成说明 -->
+        <div class="mt-5">
+          <label
+            for="sheetRemark"
+            class="block text-sm font-medium text-gray-700 mb-2"
+            >完成说明
+            <span class="text-neutral/60 font-normal">（可选）</span></label
+          >
+          <textarea
+            id="sheetRemark"
+            rows="2"
+            class="form-input resize-none px-4"
+            placeholder="记录一下完成情况…"
+          ></textarea>
+        </div>
+
+        <button
+          id="sheetConfirmBtn"
+          onclick="confirmSheetSubmit()"
+          class="w-full mt-5 bg-gradient-primary text-white py-3.5 rounded-xl font-semibold text-[15px] hover:opacity-95 active:scale-[0.98] transition-all shadow-float flex items-center justify-center gap-2"
+        >
+          <i class="fas fa-check"></i>确认完成
+        </button>
+      </div>
+    </div>
+
+    <!-- ==================== 批量完成弹窗 ==================== -->
+    <div
+      id="batchModalWrap"
+      class="fixed inset-0 z-40 hidden items-center justify-center p-6"
+    >
+      <div
+        id="batchBackdrop"
+        class="absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 transition-opacity duration-300"
+      ></div>
+      <div
+        class="relative bg-white rounded-3xl shadow-2xl p-6 w-full max-w-sm scale-95 opacity-0 transition-all duration-300"
+        id="batchModalCard"
+      >
+        <div class="text-center mb-5">
+          <div
+            class="w-12 h-12 bg-warning/10 rounded-2xl flex items-center justify-center mx-auto mb-3"
+          >
+            <i class="fas fa-bolt text-warning text-lg"></i>
+          </div>
+          <h3 class="font-bold text-gray-800">一键完成全部任务</h3>
+          <p class="text-xs text-neutral mt-1.5">
+            共
+            <span id="batchCount" class="font-semibold text-primary"></span>
+            项待完成，请选择提交方式
+          </p>
+        </div>
+
+        <div class="space-y-2.5">
+          <button
+            id="batchModeMax"
+            onclick="setBatchMode('max')"
+            class="w-full flex items-center gap-3 p-3.5 rounded-2xl border-2 border-primary bg-primary/5 text-left transition-all"
+          >
+            <div
+              class="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0"
+            >
+              <i class="fas fa-arrow-trend-up text-primary text-sm"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-semibold text-gray-800">按目标上限完成</p>
+              <p class="text-xs text-neutral mt-0.5">每项任务按最大值提交</p>
+            </div>
+            <i class="fas fa-circle-check text-primary"></i>
+          </button>
+          <button
+            id="batchModeMin"
+            onclick="setBatchMode('min')"
+            class="w-full flex items-center gap-3 p-3.5 rounded-2xl border-2 border-gray-200 text-left hover:border-gray-300 transition-all"
+          >
+            <div
+              class="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center shrink-0"
+            >
+              <i class="fas fa-flag-checkered text-neutral text-sm"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-semibold text-gray-800">按最低标准完成</p>
+              <p class="text-xs text-neutral mt-0.5">每项任务按最小值提交</p>
+            </div>
+            <i class="fa-regular fa-circle text-neutral/40"></i>
+          </button>
+        </div>
+
+        <div class="flex gap-3 mt-5">
+          <button
+            onclick="closeBatchModal()"
+            class="flex-1 py-3 rounded-xl bg-gray-100 text-gray-600 text-sm font-medium hover:bg-gray-200 transition-colors"
+          >
+            取消
+          </button>
+          <button
+            id="batchConfirmBtn"
+            onclick="confirmBatchSubmit()"
+            class="flex-[1.6] bg-gradient-primary text-white py-3 rounded-xl text-sm font-semibold hover:opacity-95 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+          >
+            <i class="fas fa-check"></i>全部完成
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // ==================== 常量配置 ====================
+      const API_BASE = "https://app.springbear.cn/self-hub-api";
+
+      const API = {
+        captcha: API_BASE + "/base/captcha",
+        login: API_BASE + "/base/login",
+        taskList: API_BASE + "/dailyTask/listActiveTaskList",
+        taskSubmit: API_BASE + "/dailyTaskCompletion/createDailyTaskCompletion",
+      };
+
+      const LS = {
+        token: "task_token",
+        user: "user_info",
+        username: "task_username",
+      };
+
+      // ==================== 全局状态 ====================
+      const state = {
+        captchaId: "",
+        captchaRetry: 0, // 验证码加载失败重试次数
+        tasks: [], // 今日全部任务
+        batchSubmitting: false,
+        doneCollapsed: false, // 已完成分区是否折叠
+        prevAllDone: false, // 上一次渲染时是否全部完成（用于触发彩带）
+        sheet: {
+          // 弹层状态
+          taskId: null,
+          count: 0,
+          min: 0,
+          max: 0,
+        },
+        batchMode: "max", // 批量提交模式：max=按上限 / min=按最低标准
+        toastTimer: null,
+      };
+
+      const $ = (id) => document.getElementById(id);
+
+      // ==================== 工具函数 ====================
+      const setLoading = (show) =>
+        $("loadingOverlay").classList.toggle("hidden", !show);
+
+      /**
+       * Toast 提示
+       * @param {string} message - 提示文本
+       * @param {string} type - success / error / info / warning
+       */
+      const showToast = (message, type = "info") => {
+        const toast = $("toast");
+        const iconMap = {
+          success: "fa-check-circle",
+          error: "fa-exclamation-circle",
+          info: "fa-info-circle",
+          warning: "fa-exclamation-triangle",
+        };
+
+        if (state.toastTimer) clearTimeout(state.toastTimer);
+        toast.className = `toast-base toast-${type}`;
+        $("toastIcon").className = `fas ${iconMap[type]}`;
+        $("toastText").textContent = message;
+
+        requestAnimationFrame(() => {
+          toast.classList.remove("opacity-0", "-translate-y-10");
+          toast.classList.add("opacity-100", "translate-y-0");
+        });
+
+        state.toastTimer = setTimeout(() => {
+          toast.classList.add("opacity-0", "-translate-y-10");
+          toast.classList.remove("opacity-100", "translate-y-0");
+        }, 3000);
+      };
+
+      const showSuccess = (m) => showToast(m, "success");
+      const showError = (m) => showToast(m, "error");
+      const showInfo = (m) => showToast(m, "info");
+      const showWarning = (m) => showToast(m, "warning");
+
+      /**
+       * 统一请求封装：自动携带 Token、超时控制、统一错误处理
+       * 不做全局单飞锁，各操作自行管理按钮状态，避免互相阻塞
+       */
+      const api = async (
+        path,
+        { method = "GET", body, timeout = 15000 } = {},
+      ) => {
+        const token = localStorage.getItem(LS.token);
+        const headers = { "Content-Type": "application/json" };
+        if (token) headers["x-token"] = token;
+
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), timeout);
+
+        try {
+          const response = await fetch(path, {
+            method,
+            headers,
+            body: body ? JSON.stringify(body) : null,
+            signal: controller.signal,
+          });
+
+          let res;
+          try {
+            res = await response.json();
+          } catch {
+            throw new Error(`服务异常（HTTP ${response.status}）`);
+          }
+
+          if (res.code !== 0) {
+            const err = new Error(res.msg || "请求失败");
+            err.code = res.code;
+            throw err;
+          }
+          return res.data;
+        } catch (error) {
+          if (error.name === "AbortError")
+            throw new Error("请求超时，请检查网络后重试");
+          throw error;
+        } finally {
+          clearTimeout(timer);
+        }
+      };
+
+      /** 今日日期（如：8月27日 星期四） */
+      const getTodayLabel = () => {
+        const fmt = new Intl.DateTimeFormat("zh-CN", {
+          month: "long",
+          day: "numeric",
+          weekday: "long",
+        });
+        return fmt.format(new Date());
+      };
+
+      /** 校验并夹取任务数量到 [min, max] */
+      const clampCount = (task, value) => {
+        const min = Math.round(Number(task.minValue) || 0);
+        const max = Math.round(Number(task.maxValue) || min);
+        const v = Math.round(Number(value));
+        if (Number.isNaN(v)) return min;
+        return Math.min(max, Math.max(min, v));
+      };
+
+      /** 构造任务完成提交参数（与后端约定字段一致） */
+      const buildCompletionPayload = (task, countValue, remark) => ({
+        taskId: task.id,
+        finishDate: new Date().toISOString(),
+        countValue,
+        remark: remark || "已完成",
+        name: task.name,
+        minValue: task.minValue,
+        maxValue: task.maxValue,
+      });
+
+      // ==================== 登录相关 ====================
+      /**
+       * 获取验证码（失败自动重试，最多3次）
+       */
+      const getCaptcha = async () => {
+        const img = $("captchaImg");
+        // 占位加载态
+        img.src =
+          "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTEyIiBoZWlnaHQ9IjQ4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxMTIiIGhlaWdodD0iNDgiIGZpbGw9IiNFRUVGRjQiLz48L3N2Zz4=";
+        img.classList.add("animate-pulse-light");
+
+        try {
+          const data = await api(API.captcha, { method: "POST" });
+          state.captchaId = data.captchaId;
+          state.captchaRetry = 0;
+          img.src = data.picPath;
+        } catch (error) {
+          if (state.captchaRetry < 3) {
+            state.captchaRetry++;
+            setTimeout(getCaptcha, 1200);
+          } else {
+            showError("验证码加载失败，请检查网络");
+          }
+        } finally {
+          img.classList.remove("animate-pulse-light");
+        }
+      };
+
+      /** 切换密码显示/隐藏 */
+      const togglePassword = () => {
+        const input = $("password");
+        const isPassword = input.type === "password";
+        input.type = isPassword ? "text" : "password";
+        $("togglePwd").innerHTML = isPassword
+          ? '<i class="fas fa-eye"></i>'
+          : '<i class="fas fa-eye-slash"></i>';
+      };
+
+      /** 登录提交 */
+      const login = async (e) => {
+        e.preventDefault();
+
+        const username = $("username").value.trim();
+        const password = $("password").value.trim();
+        const captcha = $("captcha").value.trim();
+        const btn = $("loginBtn");
+
+        if (!username) return showWarning("请输入用户名");
+        if (!password) return showWarning("请输入密码");
+        if (!captcha) return showWarning("请输入验证码");
+        if (!state.captchaId) return showWarning("验证码加载中，请稍候");
+
+        // 按钮加载态
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>登录中…';
+
+        try {
+          const data = await api(API.login, {
+            method: "POST",
+            body: {
+              username,
+              password,
+              captcha,
+              captchaId: state.captchaId,
+              openCaptcha: true,
+            },
+          });
+
+          // 持久化登录态与用户信息（key 与旧页面一致，可无缝切换）
+          localStorage.setItem(LS.token, data.token);
+          localStorage.setItem(LS.user, JSON.stringify(data.user));
+          localStorage.setItem(LS.username, username);
+
+          $("password").value = "";
+          $("captcha").value = "";
+          showSuccess("登录成功，欢迎回来！");
+          enterTaskView();
+        } catch (error) {
+          // 登录失败：抖动提示 + 刷新验证码
+          const card = $("loginForm");
+          card.classList.remove("animate-shake");
+          void card.offsetWidth; // 重置动画
+          card.classList.add("animate-shake");
+
+          $("captcha").value = "";
+          getCaptcha();
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = "登 录";
+        }
+      };
+
+      /** 退出登录 */
+      const logout = () => {
+        localStorage.removeItem(LS.token);
+        localStorage.removeItem(LS.user);
+        showInfo("已退出登录");
+        showView("login");
+      };
+
+      // ==================== 任务数据 ====================
+      /**
+       * 拉取今日任务列表并渲染
+       * @param {boolean} silent - 静默刷新（不显示全屏加载）
+       */
+      const loadTasks = async (silent = false) => {
+        if (!silent) setLoading(true);
+        try {
+          const data = await api(API.taskList);
+          state.tasks = Array.isArray(data) ? data : [];
+          renderTasks();
+        } catch (error) {
+          console.error("获取任务列表失败：", error);
+          if (state.tasks.length === 0) {
+            showSection("error");
+          } else {
+            showError(error.message);
+          }
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      /**
+       * 批量提交所有待完成任务
+       */
+      const submitAllTasks = async () => {
+        if (state.batchSubmitting) return;
+        const todoList = state.tasks.filter((t) => !t.completed);
+        if (todoList.length === 0) {
+          closeBatchModal();
+          return showInfo("暂无需要完成的任务");
+        }
+
+        state.batchSubmitting = true;
+        setBatchBarLoading(true);
+        setBatchConfirmLoading(true);
+
+        try {
+          const body = todoList.map((t) =>
+            buildCompletionPayload(
+              t,
+              state.batchMode === "max" ? t.maxValue : t.minValue,
+              "一键批量完成",
+            ),
+          );
+          await api(API.taskSubmit, { method: "POST", body });
+          showSuccess(`已批量完成 ${todoList.length} 项任务 🎉`);
+          closeBatchModal();
+          await loadTasks(true);
+        } catch (error) {
+          showError(error.message);
+        } finally {
+          state.batchSubmitting = false;
+          setBatchBarLoading(false);
+          setBatchConfirmLoading(false);
+        }
+      };
+
+      // ==================== 渲染 ====================
+      /** 切换登录/任务视图 */
+      const showView = (view) => {
+        $("loginView").classList.toggle("hidden", view !== "login");
+        $("taskView").classList.toggle("hidden", view !== "task");
+        if (view === "task") {
+          $("todayDate").textContent = getTodayLabel();
+          const user = JSON.parse(localStorage.getItem(LS.user) || "{}");
+          $("greetingName").textContent = user.nickName || "用户";
+          loadTasks();
+        } else {
+          // 回到登录页：预填用户名 + 刷新验证码
+          $("username").value = localStorage.getItem(LS.username) || "";
+          $("password").value = "";
+          $("captcha").value = "";
+          getCaptcha();
+        }
+      };
+
+      /** 进入任务视图 */
+      const enterTaskView = () => showView("task");
+
+      /** 显示指定状态区块（空/全完成/错误） */
+      const showSection = (name) => {
+        ["empty", "allDone", "error"].forEach((k) => {
+          $(`${k}State`).classList.toggle("hidden", k !== name);
+        });
+        $("todoSection").classList.add("hidden");
+        $("doneSection").classList.add("hidden");
+        $("batchBar").classList.add("hidden");
+      };
+
+      /** 更新进度环与文案 */
+      const updateProgress = (done, total) => {
+        const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+        $("doneCount").textContent = done;
+        $("totalCount").textContent = total;
+        $("progressPct").textContent = pct + "%";
+        // 进度环动画
+        $("ringFg").style.strokeDashoffset = 263.9 * (1 - pct / 100);
+
+        if (total === 0) {
+          $("progressTip").textContent = "今日暂无任务安排";
+        } else if (done === total) {
+          $("progressTip").textContent = "全部完成，为你点赞 🏆";
+        } else if (done > 0) {
+          $("progressTip").textContent = `已完成 ${done} 项，继续加油哦 💪`;
+        } else {
+          $("progressTip").textContent = "开始打卡吧，今天也要加油哦 💪";
+        }
+      };
+
+      /** 渲染单张待完成卡片 */
+      const renderTodoCard = (task, index) => {
+        const badgeText =
+          task.minValue == task.maxValue
+            ? `目标 ${task.minValue}`
+            : `目标 ${task.minValue}~${task.maxValue}`;
+        const desc = task.description
+          ? `<p class="text-xs text-neutral mt-1 line-clamp-2">${escapeHtml(task.description)}</p>`
+          : "";
+
+        return `
+            <button onclick="openSheet(${task.id})"
+                    class="w-full bg-white rounded-2xl shadow-card p-4 flex items-center gap-3.5 text-left hover:shadow-lg active:scale-[0.98] transition-all animate-fade-up"
+                    style="animation-delay: ${index * 60}ms">
+                <span class="w-11 h-11 rounded-full border-2 border-gray-200 flex items-center justify-center shrink-0">
+                    <i class="fas fa-check text-gray-300"></i>
+                </span>
+                <span class="flex-1 min-w-0">
+                    <span class="block font-medium text-gray-800 leading-snug line-clamp-2">${escapeHtml(task.name)}</span>
+                    ${desc}
+                    <span class="inline-block mt-2 text-[11px] text-primary bg-primary/10 px-2 py-0.5 rounded-full">${badgeText}</span>
+                </span>
+                <i class="fas fa-chevron-right text-neutral/30 text-xs shrink-0"></i>
+            </button>`;
+      };
+
+      /** 渲染单张已完成卡片 */
+      const renderDoneCard = (task, index) => `
+        <div class="bg-success/5 rounded-2xl p-3.5 flex items-center gap-3 animate-fade-up" style="animation-delay: ${index * 40}ms">
+            <span class="w-8 h-8 rounded-full bg-success flex items-center justify-center shrink-0">
+                <i class="fas fa-check text-white text-xs"></i>
+            </span>
+            <span class="min-w-0">
+                <span class="block text-sm text-gray-500 line-through leading-snug line-clamp-1">${escapeHtml(task.name)}</span>
+            </span>
+            <span class="ml-auto text-[10px] text-success/70 shrink-0 whitespace-nowrap">已完成</span>
+        </div>`;
+
+      /** HTML 转义，防止任务名/描述注入 */
+      const escapeHtml = (str) =>
+        String(str ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+
+      /** 主渲染入口 */
+      const renderTasks = () => {
+        const tasks = state.tasks;
+        const todoList = tasks.filter((t) => !t.completed);
+        const doneList = tasks.filter((t) => t.completed);
+
+        updateProgress(doneList.length, tasks.length);
+
+        // 无任务
+        if (tasks.length === 0) return showSection("empty");
+
+        // 全部完成：展示庆祝页（状态切换时放彩带）
+        if (todoList.length === 0) {
+          if (!state.prevAllDone && doneList.length > 0) fireConfetti();
+          state.prevAllDone = true;
+          $("allDoneCount").textContent = doneList.length;
+          return showSection("allDone");
+        }
+
+        state.prevAllDone = false;
+        $("emptyState").classList.add("hidden");
+        $("allDoneState").classList.add("hidden");
+        $("errorState").classList.add("hidden");
+
+        // 待完成列表
+        $("todoSection").classList.remove("hidden");
+        $("todoBadge").textContent = `${todoList.length} 项`;
+        $("todoList").innerHTML = todoList.map(renderTodoCard).join("");
+
+        // 已完成列表
+        if (doneList.length > 0) {
+          $("doneSection").classList.remove("hidden");
+          $("doneBadge").textContent = `${doneList.length} 项`;
+          $("doneChevron").classList.toggle("rotate-180", !state.doneCollapsed);
+          $("doneList").classList.toggle("hidden", state.doneCollapsed);
+          $("doneList").innerHTML = doneList.map(renderDoneCard).join("");
+        } else {
+          $("doneSection").classList.add("hidden");
+        }
+
+        // 批量完成栏
+        $("batchBar").classList.toggle("hidden", todoList.length === 0);
+        // 注意：批量提交加载态时该元素会被临时替换，需判空
+        const batchBtnText = $("batchBtnText");
+        if (batchBtnText)
+          batchBtnText.textContent = `一键完成全部 · ${todoList.length} 项`;
+      };
+
+      /** 已完成分区折叠/展开（仅切换显隐，不重渲染） */
+      const toggleDoneSection = () => {
+        state.doneCollapsed = !state.doneCollapsed;
+        $("doneChevron").classList.toggle("rotate-180", !state.doneCollapsed);
+        $("doneList").classList.toggle("hidden", state.doneCollapsed);
+      };
+
+      // ==================== 单任务完成弹层 ====================
+      /** 打开弹层（预填目标上限，可调整） */
+      const openSheet = (taskId) => {
+        const task = state.tasks.find((t) => t.id === taskId);
+        if (!task) return;
+
+        const min = Math.round(Number(task.minValue) || 0);
+        const max = Math.round(Number(task.maxValue) || min);
+
+        state.sheet = { taskId, count: max, min, max };
+        $("sheetName").textContent = task.name;
+        $("sheetDesc").textContent = task.description || "";
+        $("sheetDesc").classList.toggle("hidden", !task.description);
+        $("sheetRange").textContent =
+          min === max ? `目标 ${min}` : `目标 ${min} ~ ${max}`;
+        $("sheetRemark").value = "";
+
+        renderSheetStepper();
+        $("sheetWrap").classList.remove("hidden");
+        requestAnimationFrame(() => {
+          $("sheetBackdrop").classList.remove("opacity-0");
+          $("sheet").classList.remove("translate-y-full");
+        });
+      };
+
+      /** 关闭弹层 */
+      const closeSheet = () => {
+        $("sheetBackdrop").classList.add("opacity-0");
+        $("sheet").classList.add("translate-y-full");
+        setTimeout(() => $("sheetWrap").classList.add("hidden"), 300);
+      };
+
+      /** 步进器增减 */
+      const changeSheetCount = (delta) => {
+        const next = clampCount(
+          { minValue: state.sheet.min, maxValue: state.sheet.max },
+          state.sheet.count + delta,
+        );
+        if (next === state.sheet.count) return;
+        state.sheet.count = next;
+        renderSheetStepper();
+
+        // 数字弹跳反馈
+        const el = $("sheetCount");
+        el.classList.remove("bumping");
+        void el.offsetWidth;
+        el.classList.add("bumping");
+        setTimeout(() => el.classList.remove("bumping"), 150);
+      };
+
+      /** 渲染步进器（含边界禁用） */
+      const renderSheetStepper = () => {
+        $("sheetCount").textContent = state.sheet.count;
+        $("sheetMinus").disabled = state.sheet.count <= state.sheet.min;
+        $("sheetPlus").disabled = state.sheet.count >= state.sheet.max;
+      };
+
+      /** 确认完成（弹层内提交） */
+      const confirmSheetSubmit = async () => {
+        const task = state.tasks.find((t) => t.id === state.sheet.taskId);
+        if (!task) return;
+
+        const btn = $("sheetConfirmBtn");
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>提交中…';
+
+        try {
+          await api(API.taskSubmit, {
+            method: "POST",
+            body: [
+              buildCompletionPayload(
+                task,
+                state.sheet.count,
+                $("sheetRemark").value.trim(),
+              ),
+            ],
+          });
+          closeSheet();
+          showSuccess(`「${task.name}」已完成 🎉`);
+          await loadTasks(true);
+        } catch (error) {
+          showError(error.message);
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = '<i class="fas fa-check"></i>确认完成';
+        }
+      };
+
+      // ==================== 批量完成弹窗 ====================
+      /** 打开批量弹窗 */
+      const openBatchModal = () => {
+        state.batchMode = "max";
+        setBatchMode("max");
+        const todoCount = state.tasks.filter((t) => !t.completed).length;
+        $("batchCount").textContent = todoCount;
+
+        $("batchModalWrap").classList.remove("hidden");
+        $("batchModalWrap").classList.add("flex");
+        requestAnimationFrame(() => {
+          $("batchBackdrop").classList.remove("opacity-0");
+          $("batchModalCard").classList.remove("scale-95", "opacity-0");
+        });
+      };
+
+      /** 关闭批量弹窗 */
+      const closeBatchModal = () => {
+        $("batchBackdrop").classList.add("opacity-0");
+        $("batchModalCard").classList.add("scale-95", "opacity-0");
+        setTimeout(() => {
+          $("batchModalWrap").classList.add("hidden");
+          $("batchModalWrap").classList.remove("flex");
+        }, 300);
+      };
+
+      /** 选择批量提交模式 */
+      const setBatchMode = (mode) => {
+        state.batchMode = mode;
+        const maxSelected = mode === "max";
+        $("batchModeMax").className =
+          `w-full flex items-center gap-3 p-3.5 rounded-2xl border-2 transition-all ${maxSelected ? "border-primary bg-primary/5" : "border-gray-200 hover:border-gray-300"}`;
+        $("batchModeMin").className =
+          `w-full flex items-center gap-3 p-3.5 rounded-2xl border-2 transition-all ${!maxSelected ? "border-primary bg-primary/5" : "border-gray-200 hover:border-gray-300"}`;
+        $("batchModeMax").querySelector(
+          "i.fa-circle-check, i.fa-circle",
+        ).className = maxSelected
+          ? "fas fa-circle-check text-primary"
+          : "fa-regular fa-circle text-neutral/40";
+        $("batchModeMin").querySelector(
+          "i.fa-circle-check, i.fa-circle",
+        ).className = !maxSelected
+          ? "fas fa-circle-check text-primary"
+          : "fa-regular fa-circle text-neutral/40";
+      };
+
+      /** 批量提交按钮加载态 */
+      const setBatchBarLoading = (loading) => {
+        const btn = $("batchBtn");
+        btn.disabled = loading;
+        btn.innerHTML = loading
+          ? '<i class="fas fa-spinner fa-spin"></i><span>正在完成…</span>'
+          : '<i class="fas fa-bolt"></i><span id="batchBtnText"></span>';
+        if (!loading) renderTasks();
+      };
+
+      /** 批量弹窗确认按钮加载态（提交期间锁定模式选择） */
+      const setBatchConfirmLoading = (loading) => {
+        const btn = $("batchConfirmBtn");
+        btn.disabled = loading;
+        btn.innerHTML = loading
+          ? '<i class="fas fa-spinner fa-spin"></i>提交中…'
+          : '<i class="fas fa-check"></i>全部完成';
+        $("batchModeMax").disabled = loading;
+        $("batchModeMin").disabled = loading;
+      };
+
+      /** 确认批量完成 */
+      const confirmBatchSubmit = () => submitAllTasks();
+
+      // ==================== 彩带庆祝 ====================
+      /**
+       * 全屏彩带粒子动画（全部完成时触发）
+       */
+      const fireConfetti = () => {
+        const canvas = $("confettiCanvas");
+        const ctx = canvas.getContext("2d");
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        canvas.classList.remove("hidden");
+
+        const colors = [
+          "#6366F1",
+          "#8B5CF6",
+          "#10B981",
+          "#F59E0B",
+          "#EF4444",
+          "#3B82F6",
+        ];
+        const particles = Array.from({ length: 120 }, () => ({
+          x: Math.random() * canvas.width,
+          y: -20 - Math.random() * canvas.height * 0.4,
+          w: 6 + Math.random() * 6,
+          h: 8 + Math.random() * 8,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          vx: (Math.random() - 0.5) * 2.4,
+          vy: 2 + Math.random() * 3,
+          rot: Math.random() * Math.PI,
+          vr: (Math.random() - 0.5) * 0.24,
+        }));
+
+        const start = performance.now();
+        const draw = (now) => {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          particles.forEach((p) => {
+            p.x += p.vx;
+            p.y += p.vy;
+            p.rot += p.vr;
+            p.vx *= 0.99;
+            p.vy = Math.min(p.vy + 0.03, 4.5);
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rot);
+            ctx.fillStyle = p.color;
+            ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+            ctx.restore();
+          });
+
+          if (now - start < 2600) {
+            requestAnimationFrame(draw);
+          } else {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            canvas.classList.add("hidden");
+          }
+        };
+        requestAnimationFrame(draw);
+      };
+
+      // ==================== 初始化 ====================
+      const init = () => {
+        // 登录表单
+        $("loginForm").addEventListener("submit", login);
+        $("togglePwd").addEventListener("click", togglePassword);
+
+        // 弹层步进器
+        $("sheetMinus").addEventListener("click", () => changeSheetCount(-1));
+        $("sheetPlus").addEventListener("click", () => changeSheetCount(1));
+
+        // 弹层与批量弹窗：点击遮罩关闭、Esc 关闭
+        $("sheetBackdrop").addEventListener("click", closeSheet);
+        $("batchBackdrop").addEventListener("click", closeBatchModal);
+        document.addEventListener("keydown", (e) => {
+          if (e.key === "Escape") {
+            if (!$("sheetWrap").classList.contains("hidden")) closeSheet();
+            if (!$("batchModalWrap").classList.contains("hidden"))
+              closeBatchModal();
+          }
+        });
+
+        // 进入登录页时预填用户名
+        $("username").value = localStorage.getItem(LS.username) || "";
+
+        // 检查登录态，选择初始视图
+        const token = localStorage.getItem(LS.token);
+        if (token) {
+          enterTaskView();
+        } else {
+          showView("login");
+        }
+      };
+
+      // 启动应用
+      init();
+    </script>
+  </body>
+</html>

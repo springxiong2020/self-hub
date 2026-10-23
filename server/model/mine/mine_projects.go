@@ -16,6 +16,7 @@ type MineProjects struct {
 	StartDate   *time.Time `json:"startDate" form:"startDate" gorm:"comment:开始时间;column:start_date;"`
 	FinishDate  *time.Time `json:"finishDate" form:"finishDate" gorm:"comment:完成时间;column:finish_date;"`
 	SortValue   *int       `json:"sortValue" form:"sortValue" gorm:"comment:排序值;column:sort_value;size:10;"`
+	IsVisible   *int       `json:"isVisible" form:"isVisible" gorm:"comment:是否可见;column:is_visible;"`
 	CreatedAt   *time.Time `json:"createdAt" form:"createdAt" gorm:"comment:创建时间;column:created_at;"`
 	UpdatedAt   *time.Time `json:"updatedAt" form:"updatedAt" gorm:"comment:更新时间;column:updated_at;"`
 }

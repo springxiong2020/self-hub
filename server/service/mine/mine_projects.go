@@ -46,6 +46,9 @@ func (mineProjectsService *MineProjectsService) GetMineProjectsInfoList(uid uint
 	if info.Description != nil && *info.Description != "" {
 		db = db.Where("description LIKE ?", "%"+*info.Description+"%")
 	}
+	if info.IsVisible != nil {
+		db = db.Where("is_visible = ?", *info.IsVisible)
+	}
 
 	// 记录总数
 	err = db.Count(&total).Error
