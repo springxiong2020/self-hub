@@ -69,12 +69,12 @@ func (dailyTaskService *DailyTaskService) GetDailyTaskInfoList(uid uint, info re
 
 	// 查询记录
 	var dailyTasks []task.DailyTask
-	err = db.Order("sort desc").Find(&dailyTasks).Error
+	err = db.Order("`sort` desc, id desc").Find(&dailyTasks).Error
 	return dailyTasks, total, err
 }
 
 func (dailyTaskService *DailyTaskService) ListActiveTaskList(uid uint) (list []task.DailyTask, err error) {
-	err = global.GVA_DB.Where("user_id = ? AND is_active = ?", uid, constants.AssertionYes).Order("sort desc").Find(&list).Error
+	err = global.GVA_DB.Where("user_id = ? AND is_active = ?", uid, constants.AssertionYes).Order("`sort` desc, id desc").Find(&list).Error
 	if err != nil {
 		return
 	}

@@ -41,27 +41,27 @@
           </el-button>
           <el-button icon="refresh" @click="onReset">重置</el-button>
         </el-form-item>
+
+        <br />
+
+        <el-form-item label="分类">
+          <div class="flex flex-wrap gap-2">
+            <el-tag type="info" v-for="(item, index) in catStat" :key="index">
+              {{ catMap[String(item.label)] }}({{ item.total }})
+            </el-tag>
+          </div>
+        </el-form-item>
+
+        <br />
+
+        <el-form-item label="标签">
+          <div class="flex flex-wrap gap-2">
+            <el-tag type="info" v-for="(item, index) in tagStat" :key="index">
+              {{ tagMap[String(item.label)] }}({{ item.total }})
+            </el-tag>
+          </div>
+        </el-form-item>
       </el-form>
-
-      <!-- 分类区域 -->
-      <div class="flex items-center gap-3 mb-5">
-        <span class="font-medium text-gray-600 shrink-0">分类</span>
-        <div class="flex flex-wrap gap-2">
-          <el-tag type="info" v-for="(item, index) in catStat" :key="index">
-            {{ catMap[String(item.label)] }}（{{ item.total }}）
-          </el-tag>
-        </div>
-      </div>
-
-      <!-- 标签区域 -->
-      <div class="flex items-center gap-3 mb-5">
-        <span class="font-medium text-gray-600 shrink-0">标签</span>
-        <div class="flex flex-wrap gap-2">
-          <el-tag type="info" v-for="(item, index) in tagStat" :key="index">
-            {{ tagMap[String(item.label)] }}（{{ item.total }}）
-          </el-tag>
-        </div>
-      </div>
     </div>
 
     <!-- 表格 -->
@@ -113,6 +113,8 @@
             {{ tagMap[row.tagId] }}
           </template>
         </el-table-column>
+
+        <el-table-column align="center" label="排序值" prop="sortValue" />
 
         <el-table-column align="center" label="发布时间" prop="postTime">
           <template #default="scope"

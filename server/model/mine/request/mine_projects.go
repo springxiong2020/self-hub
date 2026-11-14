@@ -9,5 +9,6 @@ type MineProjectsSearch struct {
 	Title       *string `json:"title" form:"title"`
 	Description *string `json:"description" form:"description"`
 	IsVisible   *int    `json:"isVisible" form:"isVisible"`
+	IsCompleted *int    `json:"isCompleted" form:"isCompleted"`
 	request.PageInfo
 }

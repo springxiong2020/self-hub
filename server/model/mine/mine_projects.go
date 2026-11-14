@@ -19,6 +19,8 @@ type MineProjects struct {
 	IsVisible   *int       `json:"isVisible" form:"isVisible" gorm:"comment:是否可见;column:is_visible;"`
 	CreatedAt   *time.Time `json:"createdAt" form:"createdAt" gorm:"comment:创建时间;column:created_at;"`
 	UpdatedAt   *time.Time `json:"updatedAt" form:"updatedAt" gorm:"comment:更新时间;column:updated_at;"`
+
+	IsCompleted int `json:"isCompleted" form:"isCompleted" gorm:"-"`
 }
 
 func (MineProjects) TableName() string {

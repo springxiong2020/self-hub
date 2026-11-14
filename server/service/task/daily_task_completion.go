@@ -67,7 +67,7 @@ func (taskCompletionService *DailyTaskCompletionService) GetDailyTaskCompletionI
 
 	// 查询列表
 	var taskCompletions []task.DailyTaskCompletion
-	err = db.Order("finish_date desc").Find(&taskCompletions).Error
+	err = db.Order("finish_date desc, id desc").Find(&taskCompletions).Error
 	return taskCompletions, total, err
 }
 

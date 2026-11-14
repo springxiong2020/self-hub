@@ -11,7 +11,11 @@
         :xl="6"
         class="stat-col"
       >
-        <div class="premium-card" :class="`theme-${index % 3}`">
+        <div
+          class="premium-card"
+          :class="`theme-${index % 3}`"
+          @click="handleJump(item.route)"
+        >
           <div class="card-content">
             <div class="top-area">
               <div class="label-wrapper">
@@ -40,13 +44,19 @@
 </template>
 
 <script setup>
+  import { useRouter } from 'vue-router'
   import { ref, onMounted } from 'vue'
   import { getDashboardStats } from '@/api/dashboard'
+
+  const router = useRouter()
 
   const statData = ref([])
   const getStatData = async () => {
     const res = await getDashboardStats()
     statData.value = (res.data || []).sort((a, b) => a.sort - b.sort)
+  }
+  const handleJump = (path) => {
+    router.push({ path: '/layout' + path })
   }
 
   onMounted(getStatData)

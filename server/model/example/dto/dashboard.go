@@ -10,6 +10,7 @@ type DashboardStatItem struct {
 	Unit  string `json:"unit"`
 	Sort  int    `json:"sort"`
 	Icon  string `json:"icon"`
+	Route string `json:"route"`
 }
 
 func (d DashboardStatDTO) Len() int {

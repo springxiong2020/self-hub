@@ -60,17 +60,17 @@
             >收起
           </el-button>
         </el-form-item>
-      </el-form>
 
-      <!-- 统计区域 -->
-      <div class="flex items-center gap-3 mb-5">
-        <span class="font-medium text-gray-600 shrink-0">统计</span>
-        <div class="flex flex-wrap gap-2">
-          <el-tag type="info" v-for="(item, index) in catStat" :key="index">
-            {{ catMap[String(item.label)] }}（{{ item.total }}）
-          </el-tag>
-        </div>
-      </div>
+        <br />
+
+        <el-form-item label="统计">
+          <div class="flex flex-wrap gap-2">
+            <el-tag type="info" v-for="(item, index) in catStat" :key="index">
+              {{ catMap[String(item.label)] }}({{ item.total }})
+            </el-tag>
+          </div>
+        </el-form-item>
+      </el-form>
     </div>
 
     <!-- 表格 -->

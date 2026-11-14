@@ -65,6 +65,6 @@ func (miserRankingRecordService *MiserRankingRecordService) GetMiserRankingRecor
 
 	// 查询记录
 	var miserRankingRecords []miser.MiserRankingRecord
-	err = db.Order("date desc, amount desc").Find(&miserRankingRecords).Error
+	err = db.Order("`date` desc, transaction_type desc, amount desc, id desc").Find(&miserRankingRecords).Error
 	return miserRankingRecords, total, err
 }

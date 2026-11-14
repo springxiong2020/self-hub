@@ -166,7 +166,7 @@
       </template>
 
       <el-alert type="info" show-icon :closable="false" class="alert-tip"
-        >重点记录单笔金额超过 500
+        >重点记录单笔金额超过 200
         元的非刚性收支，并参与榜单排名，助您对大额收支洞若观火
       </el-alert>
 

@@ -69,7 +69,7 @@ func (mineSentencesService *MineSentencesService) GetMineSentencesInfoList(uid u
 
 	// 查询记录
 	var mineSentences []mine.MineSentences
-	err = db.Order("sort_value desc").Find(&mineSentences).Error
+	err = db.Order("sort_value desc, id desc").Find(&mineSentences).Error
 	return mineSentences, total, err
 }
 
@@ -78,7 +78,7 @@ func (mineSentencesService *MineSentencesService) SearchMineSentences(uid uint, 
 		Table("mine_sentences").
 		Model(&dto.MineResourcesDTO{}).
 		Where("user_id = ? AND (title LIKE ? OR content LIKE ?)", uid, "%"+keyword+"%", "%"+keyword+"%")
-	err = db.Select("id, title, content as description, link").Order("sort_value desc").Limit(searchPageSize).Find(&list).Error
+	err = db.Select("id, title, content as description, link").Order("sort_value desc, id desc").Limit(searchPageSize).Find(&list).Error
 	if err != nil {
 		return
 	}

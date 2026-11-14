@@ -5,9 +5,12 @@ import (
 	"github.com/springbear2020/self-hub/server/model/mine"
 	"github.com/springbear2020/self-hub/server/model/mine/dto"
 	"github.com/springbear2020/self-hub/server/model/mine/request"
+	"github.com/springbear2020/self-hub/server/utils"
 )
 
 type MineProjectsService struct{}
+
+const defaultFinishDate = "1970-01-01"
 
 func (mineProjectsService *MineProjectsService) CreateMineProjects(uid uint, mineProjects *mine.MineProjects) (err error) {
 	mineProjects.UserId = uid
@@ -49,6 +52,13 @@ func (mineProjectsService *MineProjectsService) GetMineProjectsInfoList(uid uint
 	if info.IsVisible != nil {
 		db = db.Where("is_visible = ?", *info.IsVisible)
 	}
+	if info.IsCompleted != nil {
+		if *info.IsCompleted == 1 {
+			db = db.Where("DATE_FORMAT(finish_date,'%Y-%m-%d') != ?", defaultFinishDate)
+		} else {
+			db = db.Where("DATE_FORMAT(finish_date,'%Y-%m-%d') = ?", defaultFinishDate)
+		}
+	}
 
 	// 记录总数
 	err = db.Count(&total).Error
@@ -65,7 +75,17 @@ func (mineProjectsService *MineProjectsService) GetMineProjectsInfoList(uid uint
 
 	// 查询记录
 	var mineProjects []mine.MineProjects
-	err = db.Order("sort_value desc, start_date desc").Find(&mineProjects).Error
+	err = db.Order("sort_value desc, start_date desc, id desc").Find(&mineProjects).Error
+
+	// 设置项目的完成状态
+	if err == nil && len(mineProjects) > 0 {
+		for i := range mineProjects {
+			if !utils.IsSameDay(*mineProjects[i].FinishDate, defaultFinishDate) {
+				mineProjects[i].IsCompleted = 1
+			}
+		}
+	}
+
 	return mineProjects, total, err
 }
 
@@ -74,7 +94,7 @@ func (mineProjectsService *MineProjectsService) SearchMineProjects(uid uint, key
 		Table("mine_projects").
 		Model(&dto.MineResourcesDTO{}).
 		Where("user_id = ? AND (title LIKE ? OR name LIKE ?)", uid, "%"+keyword+"%", "%"+keyword+"%")
-	err = db.Select("id, title, name as description, link").Order("sort_value desc, start_date desc").Limit(searchPageSize).Find(&list).Error
+	err = db.Select("id, title, name as description, link").Order("sort_value desc, start_date desc, id desc").Limit(searchPageSize).Find(&list).Error
 	if err != nil {
 		return
 	}

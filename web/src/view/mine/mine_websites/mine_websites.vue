@@ -34,6 +34,16 @@
           </el-button>
           <el-button icon="refresh" @click="onReset">重置</el-button>
         </el-form-item>
+
+        <br />
+
+        <el-form-item label="统计">
+          <div class="flex flex-wrap gap-2">
+            <el-tag type="info" v-for="(item, index) in catStat" :key="index">
+              {{ catMap[String(item.label)] }}({{ item.total }})
+            </el-tag>
+          </div>
+        </el-form-item>
       </el-form>
     </div>
 
@@ -252,7 +262,8 @@
     deleteMineWebsitesByIds,
     updateMineWebsites,
     findMineWebsites,
-    getMineWebsitesList
+    getMineWebsitesList,
+    getMineWebsitesStat
   } from '@/api/mine/mine_websites'
   import { getDictFunc, formatDate } from '@/utils/format'
   import { ElMessage, ElMessageBox } from 'element-plus'
@@ -587,5 +598,19 @@
     catMap.value = map
   }
 
-  onMounted(fetchCategoryList)
+  // 分类统计
+  const catStat = ref([])
+  const fetchStat = async () => {
+    const { code, data } = await getMineWebsitesStat()
+    if (code === 0 && Array.isArray(data)) {
+      catStat.value = data
+    } else {
+      catStat.value = []
+    }
+  }
+
+  onMounted(async () => {
+    await fetchCategoryList()
+    await fetchStat()
+  })
 </script>

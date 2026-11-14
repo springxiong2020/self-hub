@@ -2,6 +2,7 @@ package mine
 
 import (
 	"github.com/springbear2020/self-hub/server/global"
+	"github.com/springbear2020/self-hub/server/model/common"
 	"github.com/springbear2020/self-hub/server/model/mine"
 	"github.com/springbear2020/self-hub/server/model/mine/dto"
 	"github.com/springbear2020/self-hub/server/model/mine/request"
@@ -64,7 +65,7 @@ func (mineWebsitesService *MineWebsitesService) GetMineWebsitesInfoList(uid uint
 
 	// 查询记录
 	var mineWebsites []mine.MineWebsites
-	err = db.Order("sort_value desc").Find(&mineWebsites).Error
+	err = db.Order("sort_value desc, id desc").Find(&mineWebsites).Error
 	return mineWebsites, total, err
 }
 
@@ -106,4 +107,19 @@ func (mineWebsitesService *MineWebsitesService) ListMineWebsites(uid uint) (*dto
 	}
 
 	return &websitesDTO, nil
+}
+
+func (mineWebsitesService *MineWebsitesService) GetMineWebsitesStat(uid uint) ([]*common.CountStrDTO, error) {
+	var categories []*common.CountStrDTO
+	err := global.GVA_DB.Raw(`
+	SELECT category AS label, COUNT(1) AS total
+	FROM mine_websites
+	WHERE user_id = ?
+	GROUP BY label
+	ORDER BY total DESC;
+	`, uid).Find(&categories).Error
+	if err != nil {
+		return nil, err
+	}
+	return categories, nil
 }

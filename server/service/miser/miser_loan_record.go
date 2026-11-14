@@ -2,11 +2,12 @@ package miser
 
 import (
 	"fmt"
+	"strconv"
+
 	"github.com/springbear2020/self-hub/server/global"
 	"github.com/springbear2020/self-hub/server/model/miser"
 	"github.com/springbear2020/self-hub/server/model/miser/request"
 	"github.com/springbear2020/self-hub/server/utils"
-	"strconv"
 )
 
 type MiserLoanRecordService struct{}
@@ -74,7 +75,7 @@ func (miserLoanRecordService *MiserLoanRecordService) GetMiserLoanRecordInfoList
 
 	// 查询记录
 	var miserLoanRecords []miser.MiserLoanRecord
-	err = db.Order("lend_date desc, fund_status").Find(&miserLoanRecords).Error
+	err = db.Order("lend_date desc, lend_amount desc, fund_status, id desc").Find(&miserLoanRecords).Error
 	return miserLoanRecords, total, err
 }
 

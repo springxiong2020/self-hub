@@ -62,7 +62,7 @@ func (mineBooksService *MineBooksService) GetMineBooksInfoList(uid uint, info re
 
 	// 查询记录
 	var mineBooks []mine.MineBooks
-	err = db.Order("sort_value desc, first_completion desc").Find(&mineBooks).Error
+	err = db.Order("sort_value desc, first_completion desc, id desc").Find(&mineBooks).Error
 	return mineBooks, total, err
 }
 
@@ -71,7 +71,7 @@ func (mineBooksService *MineBooksService) SearchMineBooks(uid uint, keyword stri
 		Table("mine_books").
 		Model(&dto.MineResourcesDTO{}).
 		Where("user_id = ? AND title LIKE ?", uid, "%"+keyword+"%")
-	err = db.Select("id, title, author as description, link").Order("sort_value desc, first_completion desc").Limit(searchPageSize).Find(&list).Error
+	err = db.Select("id, title, author as description, link").Order("sort_value desc, first_completion desc, id desc").Limit(searchPageSize).Find(&list).Error
 	if err != nil {
 		return
 	}

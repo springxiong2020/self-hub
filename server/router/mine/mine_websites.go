@@ -20,6 +20,7 @@ func (s *MineWebsitesRouter) InitMineWebsitesRouter(Router *gin.RouterGroup, Pub
 	{
 		mineWebsitesRouterWithoutRecord.GET("findMineWebsites", mineWebsitesApi.FindMineWebsites)
 		mineWebsitesRouterWithoutRecord.GET("getMineWebsitesList", mineWebsitesApi.GetMineWebsitesList)
+		mineWebsitesRouterWithoutRecord.GET("getMineWebsitesStat", mineWebsitesApi.GetMineWebsitesStat)
 	}
 	{
 		_ = mineWebsitesRouterWithoutAuth

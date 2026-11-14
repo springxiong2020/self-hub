@@ -90,6 +90,7 @@
           :sortable="c.sortable"
           :formatter="formatterAmount"
           align="center"
+          min-width="100"
         />
       </el-table>
     </el-card>

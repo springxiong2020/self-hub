@@ -62,7 +62,7 @@ func (mineArchivesService *MineArchivesService) GetMineArchivesInfoList(uid uint
 
 	// 查询记录
 	var mineArchives []mine.MineArchives
-	err = db.Order("sort_value desc").Find(&mineArchives).Error
+	err = db.Order("sort_value desc, id desc").Find(&mineArchives).Error
 	return mineArchives, total, err
 }
 
@@ -71,7 +71,7 @@ func (mineArchivesService *MineArchivesService) SearchMineArchives(uid uint, key
 		Table("mine_archives").
 		Model(&dto.MineResourcesDTO{}).
 		Where("user_id = ? AND (title LIKE ? OR description LIKE ?)", uid, "%"+keyword+"%", "%"+keyword+"%")
-	err = db.Select("id, title, description, link").Order("sort_value desc").Limit(searchPageSize).Find(&list).Error
+	err = db.Select("id, title, description, link").Order("sort_value desc, id desc").Limit(searchPageSize).Find(&list).Error
 	if err != nil {
 		return
 	}

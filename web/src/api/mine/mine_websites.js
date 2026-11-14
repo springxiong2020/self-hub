@@ -47,3 +47,10 @@ export const getMineWebsitesList = (params) => {
     params
   })
 }
+
+export const getMineWebsitesStat = () => {
+  return service({
+    url: '/mineWebsites/getMineWebsitesStat',
+    method: 'get'
+  })
+}

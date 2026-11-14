@@ -63,7 +63,7 @@ func (mineBlogsService *MineBlogsService) GetMineBlogsInfoList(uid uint, info re
 
 	// 查询记录
 	var mineBlogs []mine.MineBlogs
-	err = db.Order("sort_value desc, post_time desc").Find(&mineBlogs).Error
+	err = db.Order("sort_value desc, post_time desc, id desc").Find(&mineBlogs).Error
 	return mineBlogs, total, err
 }
 
@@ -72,7 +72,7 @@ func (mineBlogsService *MineBlogsService) SearchMineBlogs(uid uint, keyword stri
 		Table("mine_blogs").
 		Model(&dto.MineResourcesDTO{}).
 		Where("user_id = ? AND title LIKE ?", uid, "%"+keyword+"%")
-	err = db.Select("id, title, DATE_FORMAT(post_time, '%Y-%m-%d %H:%i') as description, link").Order("sort_value desc, post_time desc").Limit(searchPageSize).Find(&list).Error
+	err = db.Select("id, title, DATE_FORMAT(post_time, '%Y-%m-%d %H:%i') as description, link").Order("sort_value desc, post_time desc, id desc").Limit(searchPageSize).Find(&list).Error
 	if err != nil {
 		return
 	}

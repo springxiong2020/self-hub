@@ -11,15 +11,15 @@
   const emits = defineEmits(['refresh'])
 
   const formData = ref([])
+  const finishDate = ref(new Date())
   const showDialog = ref(false)
 
   const openDialog = async () => {
-    const today = new Date()
+    finishDate.value = new Date()
     formData.value = props.dailyTasks.map(
       ({ id, name, minValue, maxValue }) => {
         return {
           taskId: id,
-          finishDate: today,
           countValue: minValue,
           remark: '',
 
@@ -37,9 +37,14 @@
   }
 
   const handleSubmit = async () => {
-    const { code } = await createDailyTaskCompletion(formData.value)
+    const { code } = await createDailyTaskCompletion(
+      formData.value.map((task) => ({
+        ...task,
+        finishDate: finishDate.value
+      }))
+    )
     if (code === 0) {
-      ElMessage.success('批量新增今日任务完成情况成功')
+      ElMessage.success('批量新增任务完成情况成功')
       emits('refresh')
       closeDialog()
     }
@@ -54,10 +59,20 @@
 <template>
   <el-dialog
     v-model="showDialog"
-    title="批量新增今日任务完成情况"
+    title="批量新增任务完成情况"
     :close-on-click-modal="false"
   >
     <el-form :model="formData">
+      <div style="display: flex; justify-content: center">
+        <el-form-item>
+          <el-date-picker
+            v-model="finishDate"
+            type="date"
+            placeholder="请选择完成日期"
+            :clearable="false"
+          />
+        </el-form-item>
+      </div>
       <el-table :data="formData" border>
         <el-table-column label="任务名称" align="center" prop="name" />
 
@@ -69,7 +84,6 @@
               type="textarea"
               maxlength="250"
               show-word-limit
-              autosize
             />
           </template>
         </el-table-column>

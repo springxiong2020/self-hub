@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"mime/multipart"
+	"time"
 )
 
 func CalculateMultipartFileMD5(file multipart.File) (string, error) {
@@ -28,4 +29,20 @@ func CalculateMultipartFileMD5(file multipart.File) (string, error) {
 	}
 
 	return md5Str, nil
+}
+
+// IsSameDay 判断传入的 time.Time 和 yyyy-MM-dd 格式的日期字符串是否为同一天
+func IsSameDay(t time.Time, dateStr string) bool {
+	// 解析日期字符串
+	parsed, err := time.Parse("2006-01-02", dateStr)
+	if err != nil {
+		return false
+	}
+
+	// 将两个时间都转换到同一时区再比较
+	// 这里以 t 的时区为准，避免时区差异导致的误判
+	y1, m1, d1 := t.Date()
+	y2, m2, d2 := parsed.In(t.Location()).Date()
+
+	return y1 == y2 && m1 == m2 && d1 == d2
 }

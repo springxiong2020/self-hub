@@ -42,9 +42,9 @@
     <div class="gva-table-box">
       <div class="gva-btn-list">
         <el-button type="primary" icon="CirclePlus" @click="handleToday"
-          >今日
+          >批增
         </el-button>
-        <el-button icon="plus" @click="openDialog()">新增</el-button>
+        <el-button icon="plus" @click="openDialog()">单增</el-button>
         <el-button
           icon="delete"
           :disabled="!multipleSelection.length"
@@ -522,7 +522,7 @@
 
   /********************************************************************************************************************/
 
-  // 批量新增今日任务完成情况
+  // 批量新增任务完成情况
   const completionRef = ref()
   const handleToday = () => {
     completionRef.value.openDialog()

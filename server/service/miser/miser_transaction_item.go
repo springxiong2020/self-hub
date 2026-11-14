@@ -72,7 +72,7 @@ func (miserTransactionItemService *MiserTransactionItemService) GetMiserTransact
 
 	// 查询记录
 	var miserTransactionItems []miser.MiserTransactionItem
-	err = db.Order("transaction_id desc, category_id desc, amount desc").Find(&miserTransactionItems).Error
+	err = db.Order("`date` desc, transaction_id desc, amount desc, id desc").Find(&miserTransactionItems).Error
 	return miserTransactionItems, total, err
 }
 

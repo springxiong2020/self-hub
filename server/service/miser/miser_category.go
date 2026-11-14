@@ -70,7 +70,7 @@ func (miserCategoryService *MiserCategoryService) GetMiserCategoryInfoList(uid u
 
 	// 查询记录
 	var miserCategories []miser.MiserCategory
-	err = db.Order("sort desc").Find(&miserCategories).Error
+	err = db.Order("transaction_type desc, `sort` desc, id desc").Find(&miserCategories).Error
 	return miserCategories, total, err
 }
 
@@ -79,6 +79,6 @@ func (miserCategoryService *MiserCategoryService) ListMiserCategoryList(uid uint
 	if transactionType != nil {
 		db = db.Where("transaction_type = ?", *transactionType)
 	}
-	err = db.Order("sort desc").Find(&list).Error
+	err = db.Order("transaction_type desc, `sort` desc, id desc").Find(&list).Error
 	return
 }

@@ -125,3 +125,15 @@ func (mineWebsitesApi *MineWebsitesApi) ListMineWebsites(c *gin.Context) {
 
 	response.OkWithData(list, c)
 }
+
+func (mineWebsitesApi *MineWebsitesApi) GetMineWebsitesStat(c *gin.Context) {
+	uid := utils.GetUserID(c)
+	list, err := mineWebsitesService.GetMineWebsitesStat(uid)
+	if err != nil {
+		global.GVA_LOG.Error("查询失败!", zap.Error(err))
+		response.FailWithMessage("查询失败:"+err.Error(), c)
+		return
+	}
+
+	response.OkWithData(list, c)
+}
