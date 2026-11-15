@@ -13,6 +13,7 @@ import (
 	"github.com/springbear2020/self-hub/server/model/system"
 	systemReq "github.com/springbear2020/self-hub/server/model/system/request"
 	systemRes "github.com/springbear2020/self-hub/server/model/system/response"
+	"github.com/springbear2020/self-hub/server/task"
 	"github.com/springbear2020/self-hub/server/utils"
 	"go.uber.org/zap"
 )
@@ -83,12 +84,7 @@ func (b *BaseApi) TokenNext(c *gin.Context, user system.SysUser) {
 		return
 	}
 	if !global.GVA_CONFIG.System.UseMultipoint {
-		utils.SetToken(c, token, int(claims.RegisteredClaims.ExpiresAt.Unix()-time.Now().Unix()))
-		response.OkWithDetailed(systemRes.LoginResponse{
-			User:      user,
-			Token:     token,
-			ExpiresAt: claims.RegisteredClaims.ExpiresAt.Unix() * 1000,
-		}, "登录成功", c)
+		b.completeLogin(c, user, token, claims.RegisteredClaims.ExpiresAt.Unix())
 		return
 	}
 
@@ -98,12 +94,7 @@ func (b *BaseApi) TokenNext(c *gin.Context, user system.SysUser) {
 			response.FailWithMessage("设置登录状态失败", c)
 			return
 		}
-		utils.SetToken(c, token, int(claims.RegisteredClaims.ExpiresAt.Unix()-time.Now().Unix()))
-		response.OkWithDetailed(systemRes.LoginResponse{
-			User:      user,
-			Token:     token,
-			ExpiresAt: claims.RegisteredClaims.ExpiresAt.Unix() * 1000,
-		}, "登录成功", c)
+		b.completeLogin(c, user, token, claims.RegisteredClaims.ExpiresAt.Unix())
 	} else if err != nil {
 		global.GVA_LOG.Error("设置登录状态失败!", zap.Error(err))
 		response.FailWithMessage("设置登录状态失败", c)
@@ -118,12 +109,24 @@ func (b *BaseApi) TokenNext(c *gin.Context, user system.SysUser) {
 			response.FailWithMessage("设置登录状态失败", c)
 			return
 		}
-		utils.SetToken(c, token, int(claims.RegisteredClaims.ExpiresAt.Unix()-time.Now().Unix()))
-		response.OkWithDetailed(systemRes.LoginResponse{
-			User:      user,
-			Token:     token,
-			ExpiresAt: claims.RegisteredClaims.ExpiresAt.Unix() * 1000,
-		}, "登录成功", c)
+		b.completeLogin(c, user, token, claims.RegisteredClaims.ExpiresAt.Unix())
+	}
+}
+
+// completeLogin 在返回登录结果前完成当日联系人分析，让进入系统后的首屏读取最新建议。
+func (b *BaseApi) completeLogin(c *gin.Context, user system.SysUser, token string, expiresAt int64) {
+	analyzeLoginContacts(user.ID)
+	utils.SetToken(c, token, int(expiresAt-time.Now().Unix()))
+	response.OkWithDetailed(systemRes.LoginResponse{
+		User:      user,
+		Token:     token,
+		ExpiresAt: expiresAt * 1000,
+	}, "登录成功", c)
+}
+
+func analyzeLoginContacts(uid uint) {
+	if err := task.AnalyzeRidgeContacts(global.GVA_DB, uid, time.Now()); err != nil {
+		global.GVA_LOG.Error("用户每日联系人分析失败", zap.Uint("userId", uid), zap.Error(err))
 	}
 }
 
@@ -455,6 +458,8 @@ func (b *BaseApi) GetUserInfo(c *gin.Context) {
 		response.FailWithMessage("获取失败", c)
 		return
 	}
+	// 已有有效 token 的用户重新打开系统时也检查当天是否需要分析。
+	analyzeLoginContacts(ReqUser.ID)
 	response.OkWithDetailed(gin.H{"userInfo": ReqUser}, "获取成功", c)
 }
 

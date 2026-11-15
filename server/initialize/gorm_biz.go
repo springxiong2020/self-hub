@@ -4,6 +4,7 @@ import (
 	"github.com/springbear2020/self-hub/server/global"
 	"github.com/springbear2020/self-hub/server/model/mine"
 	"github.com/springbear2020/self-hub/server/model/miser"
+	"github.com/springbear2020/self-hub/server/model/ridge"
 	"github.com/springbear2020/self-hub/server/model/task"
 )
 
@@ -13,6 +14,7 @@ func bizModel() error {
 		task.DailyTask{}, task.DailyTaskCompletion{},
 		miser.MiserCategory{}, miser.MiserTransaction{}, miser.MiserTransactionItem{}, miser.MiserLoanRecord{}, miser.MiserRankingRecord{},
 		mine.MineBooks{}, mine.MineBlogs{}, mine.MineProjects{}, mine.MineWebsites{}, mine.MineArchives{}, mine.MineSentences{},
+		ridge.RidgeContact{}, ridge.RidgeContactAnalysis{},
 	)
 	if err != nil {
 		return err

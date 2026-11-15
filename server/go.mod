@@ -5,6 +5,7 @@ go 1.23
 toolchain go1.23.9
 
 require (
+	github.com/6tail/lunar-go v1.4.6
 	github.com/aliyun/aliyun-oss-go-sdk v3.0.2+incompatible
 	github.com/aws/aws-sdk-go v1.55.6
 	github.com/casbin/casbin/v2 v2.103.0

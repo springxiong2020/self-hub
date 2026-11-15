@@ -4,6 +4,7 @@ import (
 	"github.com/springbear2020/self-hub/server/api/v1/example"
 	"github.com/springbear2020/self-hub/server/api/v1/mine"
 	"github.com/springbear2020/self-hub/server/api/v1/miser"
+	"github.com/springbear2020/self-hub/server/api/v1/ridge"
 	"github.com/springbear2020/self-hub/server/api/v1/system"
 	"github.com/springbear2020/self-hub/server/api/v1/task"
 )
@@ -16,4 +17,5 @@ type ApiGroup struct {
 	TaskApiGroup    task.ApiGroup
 	MiserApiGroup   miser.ApiGroup
 	MineApiGroup    mine.ApiGroup
+	RidgeApiGroup   ridge.ApiGroup
 }

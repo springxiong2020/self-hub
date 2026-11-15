@@ -7,7 +7,7 @@ aliyun-oss:
   base-path: yourBasePath
 autocode:
   web: web/src
-  root: D:\Repository\springbear\self-hub
+  root: /home/springxiong/repo/xiong/self-hub
   server: server
   module: github.com/springbear2020/self-hub/server
   ai-path: ""

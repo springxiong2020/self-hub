@@ -5,6 +5,7 @@ import (
 	"github.com/springbear2020/self-hub/server/router/mine"
 	"github.com/springbear2020/self-hub/server/router/miser"
 	"github.com/springbear2020/self-hub/server/router/opening"
+	"github.com/springbear2020/self-hub/server/router/ridge"
 	"github.com/springbear2020/self-hub/server/router/system"
 	"github.com/springbear2020/self-hub/server/router/task"
 )
@@ -18,4 +19,5 @@ type RouterGroup struct {
 	Miser   miser.RouterGroup
 	Mine    mine.RouterGroup
 	Opening opening.RouterGroup
+	Ridge   ridge.RouterGroup
 }

@@ -44,4 +44,8 @@ func initBizRouter(routers ...*gin.RouterGroup) {
 		openingRouter := router.RouterGroupApp.Opening
 		openingRouter.InitOpeningRouter(privateGroup, publicGroup)
 	}
+	{
+		ridgeRouter := router.RouterGroupApp.Ridge
+		ridgeRouter.InitRidgeContactRouter(privateGroup, publicGroup)
+	}
 }

@@ -82,6 +82,7 @@ func (svc *DashboardService) GetDashboardStatData(uid uint) (dto.DashboardStatDT
 		{Label: "精品网址", Table: "mine_websites", Unit: "个", Sort: 12, IsCount: true, Icon: "Link", Route: "/portfolio/websites"},
 		{Label: "今日任务", Table: "daily_tasks", Unit: "个", Sort: 13, IsCount: true, Icon: "Calendar", Route: "/doing/stats"},
 		{Label: "媒体资源", Table: "exa_file_upload_and_downloads", Unit: "项", Sort: 14, IsCount: true, Icon: "Picture", Route: "/media"},
+		{Label: "社交关系", Table: "ridge_contacts", Unit: "个", Sort: 15, IsCount: true, Icon: "UserFilled", Route: "/ridge/contacts"},
 	}
 
 	results := make(dto.DashboardStatDTO, 0, len(configs))
