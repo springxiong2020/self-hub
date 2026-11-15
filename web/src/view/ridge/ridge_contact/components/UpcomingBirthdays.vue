@@ -48,11 +48,29 @@
               v-for="person in group.people"
               :key="person.id"
               class="birthday-person"
+              :class="
+                person.milestoneLevel
+                  ? `birthday-person--${person.milestoneLevel}`
+                  : ''
+              "
             >
-              <el-button link type="primary" @click="emit('detail', person)">{{
-                person.name
-              }}</el-button>
-              <span>{{ formatContactBirthday(person) }}</span>
+              <div class="birthday-person-heading">
+                <el-button
+                  link
+                  type="primary"
+                  @click="emit('detail', person)"
+                  >{{ person.name }}</el-button
+                >
+                <span v-if="Number.isInteger(person.age)" class="birthday-age"
+                  >{{ person.age }} 岁生日</span
+                >
+                <span v-if="person.milestoneLabel" class="birthday-milestone">{{
+                  person.milestoneLabel
+                }}</span>
+              </div>
+              <span class="birthday-original">{{
+                formatContactBirthday(person)
+              }}</span>
             </div>
           </div>
         </div>
@@ -65,7 +83,7 @@
     />
     <p v-if="groups.length" class="birthday-note">
       按公历日期排序，包含今天；农历闰月无对应闰月时按普通月，三十遇小月取廿九；2
-      月 29 日遇平年取 2 月 28 日。
+      月 29 日遇平年取 2 月 28 日。生日年龄按所选历法计算，不加虚岁。
     </p>
   </section>
 </template>
@@ -142,7 +160,7 @@
     color: var(--el-text-color-primary);
   }
   .subtitle,
-  .birthday-person span,
+  .birthday-original,
   .birthday-note {
     font-size: 12px;
     color: var(--el-text-color-secondary);
@@ -165,10 +183,63 @@
     gap: 8px 24px;
   }
   .birthday-person {
+    --occasion-color: var(--el-text-color-regular);
+    --occasion-background: transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    max-width: 100%;
+    padding: 6px 10px;
+    border-radius: 4px;
+    background: var(--occasion-background);
+  }
+  .birthday-person-heading {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 8px;
+  }
+  .birthday-age {
+    color: var(--el-text-color-regular);
+    font-size: 13px;
+  }
+  .birthday-milestone {
+    padding: 2px 7px;
+    border: 1px solid currentColor;
+    border-radius: 3px;
+    color: var(--occasion-color);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.5;
+  }
+  .birthday-person--adult {
+    --occasion-color: #007772;
+    --occasion-background: rgba(0, 204, 198, 0.09);
+  }
+  .birthday-person--anniversary {
+    --occasion-color: var(--el-text-color-secondary);
+  }
+  .birthday-person--commemorative {
+    --occasion-color: #8a641b;
+  }
+  .birthday-person--longevity {
+    --occasion-color: #805000;
+    --occasion-background: rgba(213, 158, 36, 0.12);
+  }
+  .birthday-person--grand {
+    --occasion-color: #a52a2a;
+    --occasion-background: rgba(196, 57, 52, 0.09);
+  }
+  :global(.dark) .birthday-person--adult {
+    --occasion-color: #5be0dc;
+  }
+  :global(.dark) .birthday-person--commemorative,
+  :global(.dark) .birthday-person--longevity {
+    --occasion-color: #f3c969;
+  }
+  :global(.dark) .birthday-person--grand {
+    --occasion-color: #ff9e96;
   }
   .birthday-note {
     margin: 8px 0 0;

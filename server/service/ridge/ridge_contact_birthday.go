@@ -115,6 +115,56 @@ func nextContactBirthday(contact ridge.RidgeContact, today time.Time) (time.Time
 	return time.Time{}, errors.New("无法计算下次生日")
 }
 
+// contactBirthdayOccasion 按下次生日所属历法计算生日年龄，不加虚岁。
+// 农历腊月可能落在下一公历年，必须使用农历年份，不能直接减公历年份。
+// 18岁突出成人纪念，30/40/50标注人生节点，60/70强调整寿，80/90/100及百岁以上重点强调。
+// 66/77/88/99作为次级民俗纪念标签；不统一采用地区性的“做九不做十”。
+func contactBirthdayOccasion(contact ridge.RidgeContact, next time.Time) (age int, label, level string) {
+	birthYear, _, _, err := birthdayParts(*contact.Birthday)
+	if err != nil {
+		return 0, "", ""
+	}
+	next = next.In(birthdayLocation)
+	year := next.Year()
+	if contact.BirthdayIsLunar {
+		year = calendar.NewSolarFromYmd(next.Year(), int(next.Month()), next.Day()).GetLunar().GetYear()
+	}
+	age = year - birthYear
+	switch age {
+	case 18:
+		label, level = "成人礼", "adult"
+	case 30:
+		label, level = "三十而立", "anniversary"
+	case 40:
+		label, level = "四十不惑", "anniversary"
+	case 50:
+		label, level = "五十知命", "anniversary"
+	case 60:
+		label, level = "六十大寿 · 花甲之年", "longevity"
+	case 70:
+		label, level = "七十大寿 · 古稀之年", "longevity"
+	case 80:
+		label, level = "八十大寿 · 杖朝之年", "grand"
+	case 90:
+		label, level = "九十大寿 · 鲐背之年", "grand"
+	case 100:
+		label, level = "百岁大寿 · 期颐之年", "grand"
+	case 66:
+		label, level = "六六寿", "commemorative"
+	case 77:
+		label, level = "喜寿", "commemorative"
+	case 88:
+		label, level = "米寿", "commemorative"
+	case 99:
+		label, level = "白寿", "commemorative"
+	default:
+		if age > 100 {
+			label, level = fmt.Sprintf("%d 岁高寿", age), "grand"
+		}
+	}
+	return
+}
+
 // GetUpcomingContactBirthdays 与页面概览一样按全表计算，不受分页或搜索条件影响。
 func (s *RidgeContactService) GetUpcomingContactBirthdays(days int, now time.Time) ([]dto.ContactBirthday, error) {
 	if days != 7 && days != 30 && days != 90 {
@@ -144,9 +194,11 @@ func (s *RidgeContactService) GetUpcomingContactBirthdays(days int, now time.Tim
 		if contact.Id == nil {
 			continue
 		}
+		age, milestoneLabel, milestoneLevel := contactBirthdayOccasion(contact, next)
 		result = append(result, dto.ContactBirthday{Id: *contact.Id, Name: name, Birthday: *contact.Birthday,
 			BirthdayIsLunar: contact.BirthdayIsLunar, BirthdayIsLeapMonth: contact.BirthdayIsLeapMonth,
-			NextBirthday: next.Format("2006-01-02"), DaysUntil: remaining})
+			NextBirthday: next.Format("2006-01-02"), DaysUntil: remaining,
+			Age: age, MilestoneLabel: milestoneLabel, MilestoneLevel: milestoneLevel})
 	}
 	sort.Slice(result, func(i, j int) bool {
 		if result[i].DaysUntil == result[j].DaysUntil {

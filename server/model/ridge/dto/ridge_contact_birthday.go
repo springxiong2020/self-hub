@@ -8,4 +8,7 @@ type ContactBirthday struct {
 	BirthdayIsLeapMonth bool   `json:"birthdayIsLeapMonth"`
 	NextBirthday        string `json:"nextBirthday"`
 	DaysUntil           int    `json:"daysUntil"`
+	Age                 int    `json:"age"`
+	MilestoneLabel      string `json:"milestoneLabel"`
+	MilestoneLevel      string `json:"milestoneLevel"`
 }

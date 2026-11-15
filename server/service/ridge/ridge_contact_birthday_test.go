@@ -166,3 +166,59 @@ func TestContactBirthdayPersistenceAndTimeline(t *testing.T) {
 		t.Fatal("invalid range accepted")
 	}
 }
+
+func TestContactBirthdayOccasion(t *testing.T) {
+	for _, tc := range []struct {
+		name, birth, next string
+		lunar             bool
+		age               int
+		label, level      string
+	}{
+		{name: "普通生日", birth: "2001-11-15", next: "2026-11-15", age: 25},
+		{name: "迎来的年龄而非当前年龄", birth: "2009-01-03", next: "2027-01-03", age: 18, label: "成人礼", level: "adult"},
+		{name: "三十", birth: "1996-11-15", next: "2026-11-15", age: 30, label: "三十而立", level: "anniversary"},
+		{name: "四十", birth: "1986-11-15", next: "2026-11-15", age: 40, label: "四十不惑", level: "anniversary"},
+		{name: "五十", birth: "1976-11-15", next: "2026-11-15", age: 50, label: "五十知命", level: "anniversary"},
+		{name: "花甲", birth: "1966-11-15", next: "2026-11-15", age: 60, label: "六十大寿 · 花甲之年", level: "longevity"},
+		{name: "古稀", birth: "1956-11-15", next: "2026-11-15", age: 70, label: "七十大寿 · 古稀之年", level: "longevity"},
+		{name: "八十", birth: "1946-11-15", next: "2026-11-15", age: 80, label: "八十大寿", level: "grand"},
+		{name: "九十", birth: "1936-11-15", next: "2026-11-15", age: 90, label: "九十大寿", level: "grand"},
+		{name: "期颐", birth: "1926-11-15", next: "2026-11-15", age: 100, label: "百岁大寿 · 期颐之年", level: "grand"},
+		{name: "百岁以上", birth: "1925-11-15", next: "2026-11-15", age: 101, label: "101 岁高寿", level: "grand"},
+		{name: "六六寿", birth: "1960-11-15", next: "2026-11-15", age: 66, label: "六六寿", level: "commemorative"},
+		{name: "喜寿", birth: "1949-11-15", next: "2026-11-15", age: 77, label: "喜寿", level: "commemorative"},
+		{name: "米寿", birth: "1938-11-15", next: "2026-11-15", age: 88, label: "米寿", level: "commemorative"},
+		{name: "白寿", birth: "1927-11-15", next: "2026-11-15", age: 99, label: "白寿", level: "commemorative"},
+		{name: "不提前做整寿", birth: "1967-11-15", next: "2026-11-15", age: 59},
+		{name: "腊月生日跨公历年不多算一岁", birth: "1972-12-14", next: "2027-01-21", lunar: true, age: 54},
+		{name: "截图农历生日", birth: "2001-12-20", next: "2027-01-27", lunar: true, age: 25},
+		{name: "农历跨年成人礼", birth: "2008-12-14", next: "2027-01-21", lunar: true, age: 18, label: "成人礼", level: "adult"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			next, err := time.ParseInLocation("2006-01-02", tc.next, birthdayLocation)
+			if err != nil {
+				t.Fatal(err)
+			}
+			age, label, level := contactBirthdayOccasion(ridge.RidgeContact{Birthday: &tc.birth, BirthdayIsLunar: tc.lunar}, next)
+			if age != tc.age || label != tc.label || level != tc.level {
+				t.Fatalf("got age=%d label=%s level=%s; want age=%d label=%s level=%s", age, label, level, tc.age, tc.label, tc.level)
+			}
+		})
+	}
+}
+
+func TestUpcomingBirthdayIncludesMilestone(t *testing.T) {
+	db := birthdayTestDB(t)
+	birth, name := "1946-11-15", "奶奶"
+	if err := db.Create(&ridge.RidgeContact{Birthday: &birth, RemarkName: &name}).Error; err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2026, 11, 15, 0, 0, 0, 0, birthdayLocation)
+	items, err := (&RidgeContactService{}).GetUpcomingContactBirthdays(30, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 1 || items[0].Age != 80 || items[0].MilestoneLabel != "八十大寿" || items[0].MilestoneLevel != "grand" {
+		t.Fatalf("milestone missing from response: %+v", items)
+	}
+}
